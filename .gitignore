@@ -1,0 +1,42 @@
+# ==============================================================
+# Unreal Engine 5 — .gitignore
+# Project: VoidUnreal  (8번 과제 제출 = NBC_JangSik_Assignment8)
+# ==============================================================
+
+# --- Build / intermediate ---
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# --- Generated solution / project files (각 머신에서 재생성) ---
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.pdb
+*.xcodeproj
+*.xcworkspace
+
+# --- IDE artifacts ---
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+*.uproject.DotSettings.user
+*.user
+*.uplugin.user
+
+# --- OS / misc ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- UE5 local collections ---
+Content/Collections/
+Content/Developers/
+
+# --- Large binaries that shouldn't be in Git (consider Git LFS) ---
+# *.uasset 과 *.umap 은 기본적으로 포함 — Content/ 는 커밋 필요
+# 다만 프로젝트가 수 GB 이상으로 커지면 LFS 도입 고려
