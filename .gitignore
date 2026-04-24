@@ -37,6 +37,11 @@ desktop.ini
 Content/Collections/
 Content/Developers/
 
+# --- Marketplace asset packs (TPS 피벗 후 미사용, 로컬만 보관) ---
+# 필요 시 각 개발자가 FAB에서 개별 다운로드. GitHub 100MB 제한 회피.
+Content/Fantastic_Dungeon_Pack/
+Content/MPTopdownKit/
+
 # --- Large binaries that shouldn't be in Git (consider Git LFS) ---
 # *.uasset 과 *.umap 은 기본적으로 포함 — Content/ 는 커밋 필요
 # 다만 프로젝트가 수 GB 이상으로 커지면 LFS 도입 고려
