@@ -37,10 +37,13 @@ desktop.ini
 Content/Collections/
 Content/Developers/
 
-# --- Marketplace asset packs (TPS 피벗 후 미사용, 로컬만 보관) ---
-# 필요 시 각 개발자가 FAB에서 개별 다운로드. GitHub 100MB 제한 회피.
-Content/Fantastic_Dungeon_Pack/
-Content/MPTopdownKit/
+# --- Content 화이트리스트: Content/VoidUnreal/ 만 추적 ---
+# 외부 에셋팩(FAB, 마켓플레이스, 템플릿)은 로컬에만 보관.
+# 필요한 메시/머티리얼/애님은 Content/VoidUnreal/ 네임스페이스로 마이그레이트해서 쓸 것.
+# 이 정책은 GitHub 100MB 제한 회피 + 라이선스 리스크 최소화 목적.
+Content/*
+!Content/VoidUnreal/
+!Content/VoidUnreal/**
 
 # --- Large binaries that shouldn't be in Git (consider Git LFS) ---
 # *.uasset 과 *.umap 은 기본적으로 포함 — Content/ 는 커밋 필요
