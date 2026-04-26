@@ -12,6 +12,7 @@ class UVOIDNoiseComponent;
 class UVOIDDebuffComponent;
 class UInputMappingContext;
 class UInputAction;
+class UAIPerceptionStimuliSourceComponent;
 
 UCLASS(Blueprintable)
 class VOIDUNREAL_API AVOIDPlayerCharacter : public AVOIDBaseCharacter
@@ -47,6 +48,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UVOIDDebuffComponent> DebuffComponent;
+
+	// 옵션 2: AIPerception 청각 시스템에 자동 등록 (좀비가 사격·발소리를 듣게 함)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UAIPerceptionStimuliSourceComponent> StimuliSource;
 
 	// Enhanced Input
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")

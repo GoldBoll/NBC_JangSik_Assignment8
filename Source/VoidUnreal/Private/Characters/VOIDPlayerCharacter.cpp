@@ -1,5 +1,6 @@
 #include "Characters/VOIDPlayerCharacter.h"
 
+#include "VoidUnreal.h"  // ECC_Weapon 별칭
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -11,6 +12,9 @@
 #include "Components/VOIDInventoryComponent.h"
 #include "Components/VOIDNoiseComponent.h"
 #include "Components/VOIDDebuffComponent.h"
+
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Hearing.h"
 
 AVOIDPlayerCharacter::AVOIDPlayerCharacter()
 {
@@ -42,6 +46,11 @@ AVOIDPlayerCharacter::AVOIDPlayerCharacter()
 	InventoryComponent = CreateDefaultSubobject<UVOIDInventoryComponent>(TEXT("InventoryComponent"));
 	NoiseComponent     = CreateDefaultSubobject<UVOIDNoiseComponent>(TEXT("NoiseComponent"));
 	DebuffComponent    = CreateDefaultSubobject<UVOIDDebuffComponent>(TEXT("DebuffComponent"));
+
+	// AIPerception 소음 발신원 등록 (좀비가 사격을 듣게 함)
+	StimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("StimuliSource"));
+	StimuliSource->bAutoRegister = true;
+	StimuliSource->RegisterForSense(UAISense_Hearing::StaticClass());
 }
 
 void AVOIDPlayerCharacter::BeginPlay()
@@ -113,5 +122,63 @@ void AVOIDPlayerCharacter::Interact(const FInputActionValue& Value)
 
 void AVOIDPlayerCharacter::Fire(const FInputActionValue& Value)
 {
-	// LineTrace 기반 원거리 사격
+	// 트레이스 시작점·끝점 계산 (카메라 기준)
+	const FVector Start = FollowCamera->GetComponentLocation();
+	const FVector ForwardVector = FollowCamera->GetForwardVector();
+	const FVector End = Start + (ForwardVector * 5000.f);  // 50m 사거리
+
+	// 충돌 쿼리 파라미터 — 자기 자신 무시
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.bTraceComplex = false;
+
+	// LineTrace 실행 (Weapon 커스텀 채널 — Visibility와 분리해서 사격 전용으로 사용)
+	FHitResult Hit;
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit,
+		Start,
+		End,
+		ECC_Weapon,
+		Params);
+
+	// 피격 처리 — 죽은 캐릭터는 무시 (시체에 사격 시 로그 도배 방지)
+	if (bHit)
+	{
+		if (auto* Target = Cast<AVOIDBaseCharacter>(Hit.GetActor()))
+		{
+			if (!Target->IsDead())
+			{
+				Target->ApplyDamage(25.f);
+				UE_LOG(LogTemp, Warning, TEXT("Hit %s for 25 damage"), *Target->GetName());
+			}
+		}
+	}
+
+	// 소음 발생
+	if (NoiseComponent)
+		NoiseComponent->EmitNoise(EVOIDNoiseSource::Gunshot);
+
+	// 디버그 시각화
+	const FVector DebugEnd = bHit ? Hit.ImpactPoint : End;
+	DrawDebugLine(
+		GetWorld(),
+		Start,
+		DebugEnd,
+		FColor::Red,
+		false,
+		2.f,
+		0,
+		1.f
+		);
+	
+	if (bHit)
+		DrawDebugSphere(
+			GetWorld(),
+			Hit.ImpactPoint,
+			8.f,
+			8,
+			FColor::Yellow,
+			false,
+			2.f
+			);
 }

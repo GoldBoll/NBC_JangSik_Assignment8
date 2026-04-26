@@ -1,5 +1,8 @@
 #include "Components/VOIDNoiseComponent.h"
 
+#include "Perception/AISense_Hearing.h"
+#include "DrawDebugHelpers.h"
+
 UVOIDNoiseComponent::UVOIDNoiseComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -41,5 +44,23 @@ void UVOIDNoiseComponent::EmitNoise(EVOIDNoiseSource Source, float WeightMultipl
 
 void UVOIDNoiseComponent::BroadcastNoise(float Radius)
 {
-	// AIPerceptionSystem::MakeNoiseImpl 또는 범위 내 좀비 수동 탐색으로 확장 예정
+	if (!GetOwner() || !GetWorld()) return;
+
+	const FVector NoiseLocation = GetOwner()->GetActorLocation();
+
+	// AIPerception 시스템에 청각 이벤트 보고
+	// → AIPerceptionComponent를 가진 모든 AI가 자동으로 OnTargetPerceptionUpdated 수신
+	UAISense_Hearing::ReportNoiseEvent(
+		GetWorld(),
+		NoiseLocation,
+		1.0f,           // Loudness (1.0 = HearingRange 그대로)
+		GetOwner(),     // Instigator
+		Radius,         // Max Range
+		NAME_None       // Tag (선택적 분류)
+	);
+
+#if !(UE_BUILD_SHIPPING)
+	// 개발 빌드에서만 디버그 구 표시
+	DrawDebugSphere(GetWorld(), NoiseLocation, Radius, 16, FColor::Cyan, false, 1.0f, 0, 1.5f);
+#endif
 }

@@ -12,10 +12,6 @@ class VOIDUNREAL_API AVOIDZombieCharacter : public AVOIDBaseCharacter
 public:
 	AVOIDZombieCharacter();
 
-	// 소음에 반응해 추적 개시 (NoiseComponent 브로드캐스트 → AI 수신)
-	UFUNCTION(BlueprintCallable, Category="AI")
-	void ReactToNoise(const FVector& NoiseLocation, float NoiseRadius);
-
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
 	float AttackDamage = 20.0f;
@@ -25,4 +21,17 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
 	float SightRange = 1200.0f;
+	
+	
+	//Combat
+public:
+	UFUNCTION(BlueprintCallable, Category="Combat")
+	void AttackPlayer(AActor* Target);
+
+protected:
+	bool bCanAttack = true;
+	FTimerHandle AttackCooldownHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category="Combat")
+	float AttackCooldown = 1.0f;
 };
