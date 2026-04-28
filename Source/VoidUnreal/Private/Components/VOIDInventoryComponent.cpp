@@ -42,6 +42,21 @@ bool UVOIDInventoryComponent::RemoveItem(UVOIDItemDataAsset* ItemData, int32 Qua
 	return false;
 }
 
+UVOIDItemDataAsset* UVOIDInventoryComponent::FindPartByType(EVOIDVehiclePartType PartType) const
+{
+	for (const FVOIDInventorySlot& Slot : Slots)
+	{
+		if (Slot.ItemData
+			&& Slot.ItemData->Category == EVOIDItemCategory::VehiclePart
+			&& Slot.ItemData->PartType == PartType
+			&& Slot.Quantity > 0)
+		{
+			return Slot.ItemData;
+		}
+	}
+	return nullptr;
+}
+
 bool UVOIDInventoryComponent::CanCarry(float AdditionalWeight) const
 {
 	return (TotalWeight + AdditionalWeight) <= MaxCarry;

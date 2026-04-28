@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Items/VOIDVehiclePart.h"  // EVOIDVehiclePartType
 #include "VOIDInventoryComponent.generated.h"
 
 class UVOIDItemDataAsset;
@@ -34,6 +35,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	bool RemoveItem(UVOIDItemDataAsset* ItemData, int32 Quantity = 1);
+
+	// 슬롯 타입에 맞는 첫 부품 DataAsset 반환 (없으면 nullptr)
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	UVOIDItemDataAsset* FindPartByType(EVOIDVehiclePartType PartType) const;
 
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	bool CanCarry(float AdditionalWeight) const;

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Items/VOIDVehiclePart.h"  // EVOIDVehiclePartType
 #include "VOIDItemDataAsset.generated.h"
 
 UENUM(BlueprintType)
@@ -57,4 +58,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
 	int32 MaxStack = 1;
+
+	// Category==VehiclePart 일 때만 의미 있음 (슬롯 매칭용)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item|VehiclePart")
+	EVOIDVehiclePartType PartType = EVOIDVehiclePartType::None;
 };

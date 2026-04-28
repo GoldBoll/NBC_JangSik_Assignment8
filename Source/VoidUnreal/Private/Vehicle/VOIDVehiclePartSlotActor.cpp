@@ -1,0 +1,66 @@
+#include "Vehicle/VOIDVehiclePartSlotActor.h"
+
+#include "Vehicle/VOIDVehicle.h"
+#include "Items/VOIDItemDataAsset.h"
+#include "Components/VOIDInventoryComponent.h"
+#include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+
+AVOIDVehiclePartSlotActor::AVOIDVehiclePartSlotActor()
+{
+	PrimaryActorTick.bCanEverTick = false;
+
+	InteractionVolume = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionVolume"));
+	SetRootComponent(InteractionVolume);
+	InteractionVolume->InitSphereRadius(180.f);
+	InteractionVolume->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InteractionVolume->SetCollisionObjectType(ECC_WorldDynamic);
+	InteractionVolume->SetCollisionResponseToAllChannels(ECR_Overlap);
+	InteractionVolume->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	InteractionVolume->SetGenerateOverlapEvents(true);
+
+	EmptyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EmptyMesh"));
+	EmptyMesh->SetupAttachment(InteractionVolume);
+	EmptyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	InstalledMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InstalledMesh"));
+	InstalledMesh->SetupAttachment(InteractionVolume);
+	InstalledMesh->SetVisibility(false);
+	InstalledMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+bool AVOIDVehiclePartSlotActor::TryInstallPart_Implementation(UVOIDItemDataAsset* Part, AActor* Installer)
+{
+	if (bInstalled || !IsValid(Part) || !IsValid(Installer)) return false;
+
+	if (Part->Category != EVOIDItemCategory::VehiclePart || Part->PartType != RequiredType)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Slot] %s 부품 타입 불일치 — 필요=%s 후보=%s"),
+			*GetName(),
+			*UEnum::GetValueAsString(RequiredType),
+			*UEnum::GetValueAsString(Part->PartType));
+		return false;
+	}
+
+	UVOIDInventoryComponent* Inv = Installer->FindComponentByClass<UVOIDInventoryComponent>();
+	if (!IsValid(Inv) || !Inv->RemoveItem(Part, 1))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Slot] %s RemoveItem 실패"), *GetName());
+		return false;
+	}
+
+	bInstalled = true;
+	if (EmptyMesh)     EmptyMesh->SetVisibility(false);
+	if (InstalledMesh) InstalledMesh->SetVisibility(true);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Slot] %s 부품 설치 완료 (%s) — Weight now %.2f / %.2f"),
+		*GetName(),
+		*UEnum::GetValueAsString(RequiredType),
+		Inv->GetTotalWeight(), Inv->GetMaxCarry());
+
+	if (OwnerVehicle.IsValid())
+	{
+		OwnerVehicle->NotifySlotInstalled(RequiredType);
+	}
+	return true;
+}
