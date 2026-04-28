@@ -39,7 +39,12 @@ void UVOIDNoiseComponent::EmitNoise(EVOIDNoiseSource Source, float WeightMultipl
 	CurrentNoise = FMath::Min(CurrentNoise + Scaled, 100.0f);
 	OnNoiseChanged.Broadcast(CurrentNoise);
 
-	BroadcastNoise(Radius * WeightMultiplier);
+	// TODO: 청자 층 주입 시 FloorDiff 기반 감쇠 활성화
+	const int32 ListenerFloor = OwnerFloorIndex;
+	const int32 FloorDiff = ListenerFloor - OwnerFloorIndex;
+	const float Attenuation = (FloorDiff > 0) ? FMath::Pow(PerFloorAttenuation, FloorDiff) : 1.f;
+
+	BroadcastNoise(Radius * WeightMultiplier * Attenuation);
 }
 
 void UVOIDNoiseComponent::BroadcastNoise(float Radius)
@@ -48,19 +53,10 @@ void UVOIDNoiseComponent::BroadcastNoise(float Radius)
 
 	const FVector NoiseLocation = GetOwner()->GetActorLocation();
 
-	// AIPerception 시스템에 청각 이벤트 보고
-	// → AIPerceptionComponent를 가진 모든 AI가 자동으로 OnTargetPerceptionUpdated 수신
 	UAISense_Hearing::ReportNoiseEvent(
-		GetWorld(),
-		NoiseLocation,
-		1.0f,           // Loudness (1.0 = HearingRange 그대로)
-		GetOwner(),     // Instigator
-		Radius,         // Max Range
-		NAME_None       // Tag (선택적 분류)
-	);
+		GetWorld(), NoiseLocation, 1.0f, GetOwner(), Radius, NAME_None);
 
 #if !(UE_BUILD_SHIPPING)
-	// 개발 빌드에서만 디버그 구 표시
 	DrawDebugSphere(GetWorld(), NoiseLocation, Radius, 16, FColor::Cyan, false, 1.0f, 0, 1.5f);
 #endif
 }

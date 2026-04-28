@@ -28,13 +28,19 @@ public:
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	// Void 필러 "Noise is Currency" — 행동별 소음 발생
-	// WeightMultiplier: 무게 기반 배수 (InventoryComponent와 연동)
+	// 행동별 소음 발생 — WeightMultiplier는 무게 기반 배수
 	UFUNCTION(BlueprintCallable, Category="Noise")
 	void EmitNoise(EVOIDNoiseSource Source, float WeightMultiplier = 1.0f);
 
 	UFUNCTION(BlueprintPure, Category="Noise")
 	float GetCurrentNoise() const { return CurrentNoise; }
+
+	// 발신원 층 (1=로비, 2=거주, 3=옥상)
+	UFUNCTION(BlueprintCallable, Category="Noise")
+	void SetFloorIndex(int32 NewIndex) { OwnerFloorIndex = NewIndex; }
+
+	UFUNCTION(BlueprintPure, Category="Noise")
+	int32 GetFloorIndex() const { return OwnerFloorIndex; }
 
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FVOIDOnNoiseChanged OnNoiseChanged;
@@ -43,6 +49,14 @@ protected:
 	// 프레임당 감쇠량
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Noise")
 	float NoiseDecayPerSecond = 2.0f;
+
+	// 발신원 층 인덱스 (1=로비, 2=거주, 3=옥상)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Noise", meta=(ClampMin="1", ClampMax="3"))
+	int32 OwnerFloorIndex = 1;
+
+	// 한 층 차이당 감쇠 계수
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Noise", meta=(ClampMin="0.0", ClampMax="1.0"))
+	float PerFloorAttenuation = 0.4f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Noise")
 	float CurrentNoise = 0.0f;
