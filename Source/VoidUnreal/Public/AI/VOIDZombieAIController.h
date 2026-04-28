@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "WorldCollision.h"  // FTraceDelegate / FTraceHandle / FTraceDatum
 #include "VOIDZombieAIController.generated.h"
 
 class UBehaviorTree;
@@ -38,6 +39,26 @@ protected:
 	UFUNCTION()
 	void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
-	// 죽음 처리 1회 보장 플래그 — Tick에서 IsDead 폴링 시 중복 SetLifeSpan 방지
+	// 사망 처리 1회 가드
 	bool bDeathHandled = false;
+
+	// 비동기 Trace 가시선 검증 (AIPerception 청각과 별개)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|AsyncSight")
+	bool bUseAsyncSight = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|AsyncSight", meta=(ClampMin="0.05"))
+	float AsyncTraceInterval = 0.2f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|AsyncSight", meta=(ClampMin="100.0"))
+	float SightRange = 2500.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|AsyncSight|Debug")
+	bool bDrawAsyncSightDebug = true;
+
+	float LastAsyncTraceTime = -1000.f;
+	FTraceDelegate AsyncTraceDelegate;
+	bool bAsyncDelegateBound = false;
+
+	void RequestAsyncSight();
+	void HandleAsyncTrace(const FTraceHandle& Handle, FTraceDatum& Data);
 };
