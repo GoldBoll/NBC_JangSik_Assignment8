@@ -1,5 +1,6 @@
 #include "Waves/VOIDSpawnVolume.h"
 #include "Components/BoxComponent.h"
+#include "Engine/World.h"
 
 AVOIDSpawnVolume::AVOIDSpawnVolume()
 {
@@ -17,10 +18,24 @@ FVector AVOIDSpawnVolume::GetRandomPointInVolume() const
 
 	const FVector Extent = Bounds->GetScaledBoxExtent();
 	const FVector Origin = GetActorLocation();
-	return Origin + FVector(
+	const FVector Candidate = Origin + FVector(
 		FMath::FRandRange(-Extent.X, Extent.X),
 		FMath::FRandRange(-Extent.Y, Extent.Y),
-		0.0f);
+		Extent.Z);
+
+	// 후보 지점에서 바닥으로 라인 트레이스 → 픽업/좀비가 항상 바닥에 안착
+	if (UWorld* World = GetWorld())
+	{
+		FHitResult Hit;
+		const FVector TraceEnd = Candidate - FVector(0.0f, 0.0f, Extent.Z * 2.0f + 500.0f);
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+		if (World->LineTraceSingleByChannel(Hit, Candidate, TraceEnd, ECC_Visibility, Params))
+		{
+			return Hit.ImpactPoint;
+		}
+	}
+	return Candidate;
 }
 
 AActor* AVOIDSpawnVolume::SpawnActorOfClass(TSubclassOf<AActor> ActorClass)

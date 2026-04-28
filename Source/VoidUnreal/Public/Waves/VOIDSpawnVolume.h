@@ -31,6 +31,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawn")
 	EVOIDSpawnKind SpawnKind = EVOIDSpawnKind::Zombie;
 
+	// 이 볼륨이 속한 층 (1=로비, 2=거주, 3=옥상)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawn", meta=(ClampMin="1", ClampMax="3"))
+	int32 FloorIndex = 1;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Spawn")
 	TObjectPtr<UBoxComponent> Bounds;
