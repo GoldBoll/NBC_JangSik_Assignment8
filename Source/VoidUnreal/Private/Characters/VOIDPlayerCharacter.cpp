@@ -12,42 +12,59 @@
 #include "Components/VOIDInventoryComponent.h"
 #include "Components/VOIDNoiseComponent.h"
 #include "Components/VOIDDebuffComponent.h"
+#include "Components/VOIDWeaponComponent.h"
+
+#include "Items/VOIDItemInterface.h"
+#include "Items/VOIDItemDataAsset.h"
+#include "Items/VOIDPickupBase.h"
+#include "Weapon/VOIDWeaponConfig.h"
+#include "Items/VOIDVehiclePartSlot.h"
+#include "Vehicle/VOIDVehicle.h"
 
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Hearing.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
+#include "Engine/StaticMeshActor.h"
+#include "EngineUtils.h"
+#include "DrawDebugHelpers.h"
+
 AVOIDPlayerCharacter::AVOIDPlayerCharacter()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	// --- TPS 숄더뷰 카메라 리그 (Over-the-Shoulder, 오른쪽 어깨) ---
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 300.0f;
-	CameraBoom->SocketOffset = FVector(0.0f, 50.0f, 50.0f);    // 오른쪽 어깨 오프셋
-	CameraBoom->bUsePawnControlRotation = true;                 // SpringArm이 컨트롤러 회전 따라감
+	CameraBoom->SocketOffset = FVector(0.0f, 50.0f, 50.0f);
+	CameraBoom->bUsePawnControlRotation = true;
 	CameraBoom->bEnableCameraLag = true;
 	CameraBoom->CameraLagSpeed = 15.0f;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;              // SpringArm이 이미 회전 처리
+	FollowCamera->bUsePawnControlRotation = false;
 
 	// --- TPS 표준: 캐릭터가 컨트롤러 Yaw를 따라가도록 설정 ---
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw   = true;
 	bUseControllerRotationRoll  = false;
 
-	// --- 기본 걷기 속도 (Void 소음 시스템 전제로 보수적인 값) ---
+	// --- 기본 걷기 속도 ---
 	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
 	{
 		Movement->MaxWalkSpeed = 450.0f;
 	}
 
-	// --- Void 핵심 시스템 3종 (시점 무관) ---
+	// --- Void 핵심 시스템 3종 ---
 	InventoryComponent = CreateDefaultSubobject<UVOIDInventoryComponent>(TEXT("InventoryComponent"));
 	NoiseComponent     = CreateDefaultSubobject<UVOIDNoiseComponent>(TEXT("NoiseComponent"));
 	DebuffComponent    = CreateDefaultSubobject<UVOIDDebuffComponent>(TEXT("DebuffComponent"));
 
-	// AIPerception 소음 발신원 등록 (좀비가 사격을 듣게 함)
+	WeaponComp = CreateDefaultSubobject<UVOIDWeaponComponent>(TEXT("WeaponComp"));
+
 	StimuliSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("StimuliSource"));
 	StimuliSource->bAutoRegister = true;
 	StimuliSource->RegisterForSense(UAISense_Hearing::StaticClass());
@@ -70,6 +87,21 @@ void AVOIDPlayerCharacter::BeginPlay()
 	}
 }
 
+void AVOIDPlayerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	TickAds(DeltaTime);
+
+	if (WeaponComp)
+	{
+		float PitchDelta = 0.f, YawDelta = 0.f;
+		WeaponComp->TickRecoil(DeltaTime, PitchDelta, YawDelta);
+		if (!FMath::IsNearlyZero(PitchDelta)) { AddControllerPitchInput(PitchDelta); }
+		if (!FMath::IsNearlyZero(YawDelta))   { AddControllerYawInput(YawDelta); }
+	}
+}
+
 void AVOIDPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -81,104 +113,217 @@ void AVOIDPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	if (LookAction)     { EIC->BindAction(LookAction,     ETriggerEvent::Triggered, this, &AVOIDPlayerCharacter::Look); }
 	if (InteractAction) { EIC->BindAction(InteractAction, ETriggerEvent::Started,   this, &AVOIDPlayerCharacter::Interact); }
 	if (FireAction)     { EIC->BindAction(FireAction,     ETriggerEvent::Started,   this, &AVOIDPlayerCharacter::Fire); }
+	if (AimAction)
+	{
+		EIC->BindAction(AimAction, ETriggerEvent::Started,   this, &AVOIDPlayerCharacter::OnAimStarted);
+		EIC->BindAction(AimAction, ETriggerEvent::Completed, this, &AVOIDPlayerCharacter::OnAimCompleted);
+	}
+	if (SwitchToRifleAction)   { EIC->BindAction(SwitchToRifleAction,   ETriggerEvent::Started, this, &AVOIDPlayerCharacter::OnSwitchToRifle); }
+	if (SwitchToShotgunAction) { EIC->BindAction(SwitchToShotgunAction, ETriggerEvent::Started, this, &AVOIDPlayerCharacter::OnSwitchToShotgun); }
+}
+
+void AVOIDPlayerCharacter::OnSwitchToRifle(const FInputActionValue& Value)
+{
+	if (RifleConfig) { EquipWeapon(RifleConfig); }
+}
+
+void AVOIDPlayerCharacter::OnSwitchToShotgun(const FInputActionValue& Value)
+{
+	if (ShotgunConfig) { EquipWeapon(ShotgunConfig); }
 }
 
 void AVOIDPlayerCharacter::Move(const FInputActionValue& Value)
 {
-	// 컨트롤러가 있어야 방향 계산이 가능
 	if (!Controller) { return; }
 
-	// Value는 Axis2D로 설정된 IA_Move의 입력값 (WASD)을 담고 있음
-	// 예) (X=1, Y=0) → 전진 / (X=-1, Y=0) → 후진 / (X=0, Y=1) → 오른쪽 / (X=0, Y=-1) → 왼쪽
 	const FVector2D MoveInput = Value.Get<FVector2D>();
 
 	if (!FMath::IsNearlyZero(MoveInput.X))
 	{
-		// 캐릭터가 바라보는 방향(정면)으로 X축 이동 (bUseControllerRotationYaw=true이므로 카메라 방향과 일치)
 		AddMovementInput(GetActorForwardVector(), MoveInput.X);
 	}
 
 	if (!FMath::IsNearlyZero(MoveInput.Y))
 	{
-		// 캐릭터의 오른쪽 방향으로 Y축 이동
 		AddMovementInput(GetActorRightVector(), MoveInput.Y);
 	}
 }
 
 void AVOIDPlayerCharacter::Look(const FInputActionValue& Value)
 {
-	// 마우스의 X, Y 움직임을 2D 축으로 가져옴
 	const FVector2D LookInput = Value.Get<FVector2D>();
-
-	// X는 좌우 회전 (Yaw), Y는 상하 회전 (Pitch)
 	AddControllerYawInput(LookInput.X);
 	AddControllerPitchInput(LookInput.Y);
 }
 
 void AVOIDPlayerCharacter::Interact(const FInputActionValue& Value)
 {
-	// Press E — 근접 아이템 픽업 (ItemInterface 호출)
-}
+	if (!InventoryComponent) { return; }
 
-void AVOIDPlayerCharacter::Fire(const FInputActionValue& Value)
-{
-	// 트레이스 시작점·끝점 계산 (카메라 기준)
-	const FVector Start = FollowCamera->GetComponentLocation();
-	const FVector ForwardVector = FollowCamera->GetForwardVector();
-	const FVector End = Start + (ForwardVector * 5000.f);  // 50m 사거리
+	// 정면 200cm Sphere Sweep — 가장 가까운 인터랙터블 1개
+	const FVector Start = GetActorLocation();
+	const FVector End   = Start + GetActorForwardVector() * 200.0f;
+	const float SphereRadius = 80.0f;
 
-	// 충돌 쿼리 파라미터 — 자기 자신 무시
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 	Params.bTraceComplex = false;
 
-	// LineTrace 실행 (Weapon 커스텀 채널 — Visibility와 분리해서 사격 전용으로 사용)
-	FHitResult Hit;
-	bool bHit = GetWorld()->LineTraceSingleByChannel(
-		Hit,
-		Start,
-		End,
-		ECC_Weapon,
-		Params);
-
-	// 피격 처리 — 죽은 캐릭터는 무시 (시체에 사격 시 로그 도배 방지)
-	if (bHit)
+	// 헬기 본체 메시(차량 자체)는 Block 응답이라 Sweep이 거기서 끊긴다 → 무시 처리
+	for (TActorIterator<AVOIDVehicle> It(GetWorld()); It; ++It)
 	{
-		if (auto* Target = Cast<AVOIDBaseCharacter>(Hit.GetActor()))
+		Params.AddIgnoredActor(*It);
+	}
+
+	TArray<FHitResult> Hits;
+	GetWorld()->SweepMultiByChannel(
+		Hits, Start, End, FQuat::Identity, ECC_Visibility,
+		FCollisionShape::MakeSphere(SphereRadius), Params);
+
+#if !(UE_BUILD_SHIPPING)
+	UE_LOG(LogTemp, Warning, TEXT("[Interact] Sweep hits=%d"), Hits.Num());
+	for (const FHitResult& H : Hits)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Interact]   Hit: %s (Component=%s)"),
+			*GetNameSafe(H.GetActor()),
+			*GetNameSafe(H.GetComponent()));
+	}
+#endif
+
+	AActor* Best = nullptr;
+	float BestDistSq = FLT_MAX;
+	for (const FHitResult& Hit : Hits)
+	{
+		AActor* HitActor = Hit.GetActor();
+		if (!HitActor) { continue; }
+
+		// 후보 우선순위: Slot 설치 → Vehicle 시동 → Item 픽업
+		const bool bSlot    = HitActor->Implements<UVOIDVehiclePartSlot>();
+		const bool bVehicle = HitActor->IsA(AVOIDVehicle::StaticClass());
+		const bool bItem    = HitActor->Implements<UVOIDItemInterface>();
+		const bool bStaticDecor = HitActor->IsA(AStaticMeshActor::StaticClass());
+		if (bStaticDecor) { continue; } // 헬기 데코 메시 등은 인터랙트 후보 아님
+		if (!bSlot && !bVehicle && !bItem) { continue; }
+
+		const float DistSq = FVector::DistSquared(Start, HitActor->GetActorLocation());
+		if (DistSq < BestDistSq)
 		{
-			if (!Target->IsDead())
-			{
-				Target->ApplyDamage(25.f);
-				UE_LOG(LogTemp, Warning, TEXT("Hit %s for 25 damage"), *Target->GetName());
-			}
+			BestDistSq = DistSq;
+			Best = HitActor;
 		}
 	}
 
-	// 소음 발생
-	if (NoiseComponent)
-		NoiseComponent->EmitNoise(EVOIDNoiseSource::Gunshot);
+#if !(UE_BUILD_SHIPPING)
+	DrawDebugSphere(GetWorld(), End, SphereRadius, 12,
+		Best ? FColor::Green : FColor::Yellow, false, 0.5f);
+#endif
 
-	// 디버그 시각화
-	const FVector DebugEnd = bHit ? Hit.ImpactPoint : End;
-	DrawDebugLine(
-		GetWorld(),
-		Start,
-		DebugEnd,
-		FColor::Red,
-		false,
-		2.f,
-		0,
-		1.f
-		);
-	
-	if (bHit)
-		DrawDebugSphere(
-			GetWorld(),
-			Hit.ImpactPoint,
-			8.f,
-			8,
-			FColor::Yellow,
-			false,
-			2.f
-			);
+	if (!Best) { return; }
+
+	// 슬롯 분기: TODO Day 5 — InventoryComponent::FindPartByType 추가 후 정확한 부품 매칭으로 교체
+	if (Best->Implements<UVOIDVehiclePartSlot>())
+	{
+		const EVOIDVehiclePartType SlotType = IVOIDVehiclePartSlot::Execute_GetRequiredPartType(Best);
+		UVOIDItemDataAsset* CandidatePart = InventoryComponent ? InventoryComponent->FindPartByType(SlotType) : nullptr;
+
+		if (!CandidatePart)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Interact] InstallPart Slot=%s FAIL — 인벤토리에 부품 없음"),
+				*UEnum::GetValueAsString(SlotType));
+			return;
+		}
+
+		const float WeightBefore = InventoryComponent ? InventoryComponent->GetTotalWeight() : 0.f;
+		const bool bOk = IVOIDVehiclePartSlot::Execute_TryInstallPart(Best, CandidatePart, this);
+		const float WeightAfter  = InventoryComponent ? InventoryComponent->GetTotalWeight() : 0.f;
+
+		UE_LOG(LogTemp, Warning, TEXT("[Interact] InstallPart Slot=%s Part=%s Result=%s  Weight %.2f → %.2f / %.2f"),
+			*UEnum::GetValueAsString(SlotType),
+			*CandidatePart->GetName(),
+			bOk ? TEXT("OK") : TEXT("FAIL"),
+			WeightBefore, WeightAfter,
+			InventoryComponent ? InventoryComponent->GetMaxCarry() : 0.f);
+		return;
+	}
+
+	if (auto* Vehicle = Cast<AVOIDVehicle>(Best))
+	{
+		const bool bStarted = Vehicle->TryStartEngine(this);
+		UE_LOG(LogTemp, Display, TEXT("[Interact] StartEngine Result=%s"),
+			bStarted ? TEXT("OK") : TEXT("FAIL (repair incomplete)"));
+		return;
+	}
+
+	if (!Best->Implements<UVOIDItemInterface>()) { return; }
+
+	UVOIDItemDataAsset* Data = IVOIDItemInterface::Execute_GetItemData(Best);
+	if (!Data) { return; }
+
+	// TODO: AVOIDPickupBase::Quantity를 인터페이스에 노출하면 1개 고정 제거
+	if (!InventoryComponent->TryAddItem(Data, 1))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[VOID Interact] %s 인벤토리 가득 (%.1f / %.1f)"),
+			*Best->GetName(), InventoryComponent->GetTotalWeight(), InventoryComponent->GetMaxCarry());
+		return;
+	}
+
+	IVOIDItemInterface::Execute_OnPickedUp(Best, this);
+
+	if (NoiseComponent)
+	{
+		const float WeightRatio = InventoryComponent->GetWeightRatio();
+		const float Multiplier = 1.0f + FMath::Clamp(WeightRatio, 0.0f, 1.0f) * NoiseWeightFactor;
+		NoiseComponent->EmitNoise(EVOIDNoiseSource::Pickup, Multiplier);
+	}
+
+	Best->Destroy();
+}
+
+void AVOIDPlayerCharacter::Fire(const FInputActionValue& Value)
+{
+	if (!IsValid(WeaponComp) || !IsValid(FollowCamera)) { return; }
+
+	const FVector  MuzzleLoc = FollowCamera->GetComponentLocation();
+	const FRotator AimRot    = FollowCamera->GetComponentRotation();
+	const float    SpreadMul = bIsAiming ? 0.3f : 1.f;
+
+	const bool bFired = WeaponComp->TryFire(MuzzleLoc, AimRot, this, SpreadMul);
+
+	if (bFired && NoiseComponent)
+	{
+		const float WeightRatio = InventoryComponent ? InventoryComponent->GetWeightRatio() : 0.0f;
+		const float Multiplier = 1.0f + FMath::Clamp(WeightRatio, 0.0f, 1.0f) * NoiseWeightFactor;
+		NoiseComponent->EmitNoise(EVOIDNoiseSource::Gunshot, Multiplier);
+	}
+}
+
+
+void AVOIDPlayerCharacter::EquipWeapon(UVOIDWeaponConfig* NewWeapon)
+{
+	if (WeaponComp)
+	{
+		WeaponComp->EquipWeapon(NewWeapon);
+	}
+}
+
+void AVOIDPlayerCharacter::TickAds(float DeltaTime)
+{
+	if (!IsValid(FollowCamera) || !IsValid(CameraBoom)) { return; }
+
+	const float TargetFOV = bIsAiming ? AdsFOV : HipFOV;
+	FollowCamera->SetFieldOfView(
+		FMath::FInterpTo(FollowCamera->FieldOfView, TargetFOV, DeltaTime, AdsBlendSpeed));
+
+	const float TargetArm = bIsAiming ? AdsArmLength : HipArmLength;
+	CameraBoom->TargetArmLength =
+		FMath::FInterpTo(CameraBoom->TargetArmLength, TargetArm, DeltaTime, AdsBlendSpeed);
+
+	// 무게·ADS 감속을 곱셈 합성 — 단일 지점 갱신
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		const float WeightRatio = InventoryComponent ? FMath::Clamp(InventoryComponent->GetWeightRatio(), 0.f, 1.f) : 0.f;
+		const float WeightFactor = 1.f - WeightRatio * WeightSpeedPenalty;
+		const float AdsMul = bIsAiming ? AdsMoveMultiplier : 1.f;
+		Move->MaxWalkSpeed = BaseWalkSpeed * WeightFactor * AdsMul;
+	}
 }
