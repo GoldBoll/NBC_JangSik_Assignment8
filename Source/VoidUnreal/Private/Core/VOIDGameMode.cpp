@@ -5,16 +5,97 @@
 #include "Waves/VOIDSpawnVolume.h"
 #include "Items/VOIDPickupBase.h"
 #include "Characters/VOIDZombieCharacter.h"
+#include "Blueprint/UserWidget.h"
+#include "TimerManager.h"
+#include "Core/VOIDPlayerController.h"
+#include "UI/VOIDHUDWidget.h"
 
 AVOIDGameMode::AVOIDGameMode()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	GameStateClass = AVOIDGameState::StaticClass();
+}
+
+void AVOIDGameMode::HandleEscapeSuccess(AActor* Driver)
+{
+	UE_LOG(LogTemp, Display, TEXT("[VOID] HandleEscapeSuccess by %s → OpenLevel(%s)"),
+		*GetNameSafe(Driver), *EscapeLevelName.ToString());
+
+	GetWorldTimerManager().ClearTimer(EscapeTimerHandle);
+	GetWorldTimerManager().ClearTimer(EscapeTickHandle);
+
+	UGameplayStatics::OpenLevel(this, EscapeLevelName);
+}
+
+void AVOIDGameMode::HandleGameOver()
+{
+	UE_LOG(LogTemp, Display, TEXT("[VOID] HandleGameOver — show GameOver overlay (no level change)"));
+
+	GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+	GetWorldTimerManager().ClearTimer(EscapeTimerHandle);
+	GetWorldTimerManager().ClearTimer(EscapeTickHandle);
+
+	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+	if (auto* VPC = Cast<AVOIDPlayerController>(PC))
+	{
+		if (auto* HUD = Cast<UVOIDHUDWidget>(VPC->GetHUDWidgetInstance()))
+		{
+			HUD->SetHUDMode(EVOIDHUDMode::GameOver);
+		}
+	}
+	if (PC)
+	{
+		PC->SetCinematicMode(true, false, false, true, true);
+	}
 }
 
 void AVOIDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	StartWave(1);
+	StartEscapeTimer();
+}
+
+void AVOIDGameMode::StartEscapeTimer()
+{
+	EscapeRemaining = EscapeTimeLimit;
+
+	AVOIDGameState* GS = GetGameState<AVOIDGameState>();
+	UE_LOG(LogTemp, Display, TEXT("[VOID] Escape timer start — %.0fs  GameState=%s"),
+		EscapeRemaining, GS ? *GS->GetName() : TEXT("NULL (not AVOIDGameState!)"));
+
+	if (GS)
+	{
+		GS->SetRemainingTime(EscapeRemaining);
+	}
+
+	GetWorldTimerManager().SetTimer(
+		EscapeTimerHandle, this, &AVOIDGameMode::OnEscapeTimerExpired,
+		EscapeTimeLimit, false);
+
+	GetWorldTimerManager().SetTimer(
+		EscapeTickHandle, this, &AVOIDGameMode::OnEscapeTick,
+		1.0f, true);
+}
+
+void AVOIDGameMode::OnEscapeTick()
+{
+	EscapeRemaining = FMath::Max(0.0f, EscapeRemaining - 1.0f);
+	if (AVOIDGameState* GS = GetGameState<AVOIDGameState>())
+	{
+		GS->SetRemainingTime(EscapeRemaining);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[VOID] OnEscapeTick — GameState NULL, TimeText 미갱신"));
+	}
+}
+
+void AVOIDGameMode::OnEscapeTimerExpired()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[VOID] Escape timer expired — GameOver"));
+	GetWorldTimerManager().ClearTimer(EscapeTickHandle);
+	HandleGameOver();
 }
 
 void AVOIDGameMode::StartWave(int32 WaveIndex)

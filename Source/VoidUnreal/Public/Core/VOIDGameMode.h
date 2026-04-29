@@ -42,6 +42,32 @@ public:
 	UFUNCTION(BlueprintPure, Category="Wave")
 	FVOIDWaveData GetCurrentWaveData() const { return CurrentWaveData; }
 
+	// 차량 시동 성공 → 탈출 레벨로 전환
+	UFUNCTION(BlueprintCallable, Category="Escape")
+	void HandleEscapeSuccess(AActor* Driver);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Escape")
+	FName EscapeLevelName = TEXT("Lv_Escape");
+
+	// 플레이어 사망 → 게임오버 위젯 표시 또는 메인 메뉴로 전환
+	UFUNCTION(BlueprintCallable, Category="GameOver")
+	void HandleGameOver();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Escape")
+	float EscapeTimeLimit = 600.0f; // 10분 = 600초
+
+	UFUNCTION(BlueprintPure, Category="Escape")
+	float GetEscapeRemaining() const { return EscapeRemaining; }
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="GameOver")
+	FName GameOverLevelName = TEXT("Lv_Main");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="GameOver")
+	float GameOverReturnDelay = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="GameOver")
+	TSubclassOf<class UUserWidget> GameOverWidgetClass;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -65,4 +91,12 @@ protected:
 	FVOIDWaveData CurrentWaveData;
 
 	FTimerHandle WaveTimerHandle;
+
+	FTimerHandle EscapeTimerHandle;
+	FTimerHandle EscapeTickHandle;
+	float EscapeRemaining = 0.0f;
+
+	void StartEscapeTimer();
+	void OnEscapeTick();
+	void OnEscapeTimerExpired();
 };
