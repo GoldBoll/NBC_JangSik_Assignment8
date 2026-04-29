@@ -13,8 +13,16 @@ public:
 	AVOIDZombieCharacter();
 
 protected:
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void HandleZombieDeath();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Score")
+	int32 ScoreReward = 10;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
-	float AttackDamage = 20.0f;
+	float AttackDamage = 10.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
 	float AttackRange = 100.0f;

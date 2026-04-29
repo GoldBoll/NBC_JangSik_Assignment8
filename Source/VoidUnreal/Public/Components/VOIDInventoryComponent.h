@@ -53,12 +53,18 @@ public:
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	float GetWeightRatio() const;
 
+	const TArray<FVOIDInventorySlot>& GetSlots() const { return Slots; }
+
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FVOIDOnWeightChanged OnWeightChanged;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Inventory")
 	float MaxCarry = 30.0f; // kg
+
+	// 같은 ItemData(=같은 종류) 1슬롯에 쌓을 수 있는 최대 개수
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Inventory", meta=(ClampMin="1"))
+	int32 MaxStackPerItem = 2;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory")
 	float TotalWeight = 0.0f;

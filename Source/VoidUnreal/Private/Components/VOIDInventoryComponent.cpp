@@ -10,12 +10,35 @@ bool UVOIDInventoryComponent::TryAddItem(UVOIDItemDataAsset* ItemData, int32 Qua
 {
 	if (!ItemData || Quantity <= 0) { return false; }
 
-	const float AddedWeight = ItemData->Weight * Quantity;
+	// 동일 ItemData 슬롯이 이미 있으면 누적 — 단, MaxStackPerItem 까지만
+	for (FVOIDInventorySlot& Existing : Slots)
+	{
+		if (Existing.ItemData == ItemData)
+		{
+			const int32 Allowed = FMath::Max(0, MaxStackPerItem - Existing.Quantity);
+			if (Allowed <= 0)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[Inventory] %s 스택 가득 (%d/%d) — 픽업 거부"),
+					*ItemData->GetName(), Existing.Quantity, MaxStackPerItem);
+				return false;
+			}
+			const int32 ActualAdd = FMath::Min(Quantity, Allowed);
+			const float AddedWeight = ItemData->Weight * ActualAdd;
+			if (!CanCarry(AddedWeight)) { return false; }
+
+			Existing.Quantity += ActualAdd;
+			RecomputeTotalWeight();
+			return true;
+		}
+	}
+
+	const int32 ActualAdd = FMath::Min(Quantity, MaxStackPerItem);
+	const float AddedWeight = ItemData->Weight * ActualAdd;
 	if (!CanCarry(AddedWeight)) { return false; }
 
 	FVOIDInventorySlot NewSlot;
 	NewSlot.ItemData = ItemData;
-	NewSlot.Quantity = Quantity;
+	NewSlot.Quantity = ActualAdd;
 	Slots.Add(NewSlot);
 
 	RecomputeTotalWeight();

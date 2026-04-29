@@ -1,8 +1,34 @@
 #include "Characters/VOIDZombieCharacter.h"
+#include "Components/VOIDHealthComponent.h"
+#include "Core/VOIDGameState.h"
+#include "Kismet/GameplayStatics.h"
 
 AVOIDZombieCharacter::AVOIDZombieCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
+}
+
+void AVOIDZombieCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (auto* HP = FindComponentByClass<UVOIDHealthComponent>())
+	{
+		HP->OnDeath.AddUniqueDynamic(this, &AVOIDZombieCharacter::HandleZombieDeath);
+	}
+}
+
+void AVOIDZombieCharacter::HandleZombieDeath()
+{
+	if (auto* GS = UGameplayStatics::GetGameState(this))
+	{
+		if (auto* VGS = Cast<AVOIDGameState>(GS))
+		{
+			VGS->AddScore(ScoreReward);
+			UE_LOG(LogTemp, Display, TEXT("[Zombie] %s killed → +%d score (total=%d)"),
+				*GetName(), ScoreReward, VGS->GetCurrentScore());
+		}
+	}
 }
 
 void AVOIDZombieCharacter::AttackPlayer(AActor* Target)
