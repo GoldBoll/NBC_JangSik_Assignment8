@@ -14,9 +14,16 @@ class VOIDUNREAL_API AVOIDPlayerController : public APlayerController
 public:
 	AVOIDPlayerController();
 
+	UFUNCTION(BlueprintPure, Category="UI")
+	UUserWidget* GetHUDWidgetInstance() const { return HUDWidgetInstance; }
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
 	virtual void SetupInputComponent() override;
+
+	UFUNCTION()
+	void HandlePlayerDeath();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;

@@ -6,6 +6,7 @@
 
 class USoundBase;
 class UCameraShakeBase;
+class UTexture2D;
 
 UENUM(BlueprintType)
 enum class EVOIDWeaponClass : uint8
@@ -29,6 +30,14 @@ public:
     // 해당 무기 데이터의 고유 식별자.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Identity")
     FName WeaponId = NAME_None;
+
+    // HUD 표기용 무기 이름 (없으면 WeaponId 사용).
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Identity")
+    FText DisplayName;
+
+    // HUD 좌측 무기 아이콘 (선택).
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Identity")
+    TObjectPtr<UTexture2D> Icon;
 
     // 한 번 발사할 때 나가는 투사체(탄알)의 개수 (샷건 등에 사용).
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire", meta=(ClampMin="1"))
