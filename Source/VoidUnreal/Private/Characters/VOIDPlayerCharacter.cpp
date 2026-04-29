@@ -13,6 +13,8 @@
 #include "Components/VOIDNoiseComponent.h"
 #include "Components/VOIDDebuffComponent.h"
 #include "Components/VOIDWeaponComponent.h"
+#include "Components/VOIDHealthComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 #include "Items/VOIDItemInterface.h"
 #include "Items/VOIDItemDataAsset.h"
@@ -85,6 +87,50 @@ void AVOIDPlayerCharacter::BeginPlay()
 			}
 		}
 	}
+
+	// 기본 무기 = 샷건 (없으면 라이플 폴백)
+	if (ShotgunConfig)      { EquipWeapon(ShotgunConfig); }
+	else if (RifleConfig)   { EquipWeapon(RifleConfig); }
+
+	// 디버프 트리거 바인딩
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnWeightChanged.AddDynamic(this, &AVOIDPlayerCharacter::OnInventoryWeightChanged);
+		OnInventoryWeightChanged(InventoryComponent->GetTotalWeight(), InventoryComponent->GetMaxCarry());
+	}
+	if (auto* HP = FindComponentByClass<UVOIDHealthComponent>())
+	{
+		LastHealthForBleeding = HP->GetCurrentHealth();
+		HP->OnHealthChanged.AddDynamic(this, &AVOIDPlayerCharacter::OnPlayerHealthChanged);
+	}
+}
+
+void AVOIDPlayerCharacter::OnInventoryWeightChanged(float TotalWeight, float MaxCarry)
+{
+	if (DebuffComponent && MaxCarry > 0.f)
+	{
+		DebuffComponent->UpdateOverweightFromInventory(TotalWeight / MaxCarry);
+	}
+}
+
+void AVOIDPlayerCharacter::OnPlayerHealthChanged(float NewHealth)
+{
+	if (LastHealthForBleeding < 0.f) { LastHealthForBleeding = NewHealth; return; }
+
+	const float Damage = LastHealthForBleeding - NewHealth;
+	LastHealthForBleeding = NewHealth;
+	if (Damage <= 0.f || !DebuffComponent) { return; }
+
+	if (FMath::FRand() < BleedingChance)
+	{
+		DebuffComponent->ApplyDebuff(EVOIDDebuffType::Bleeding, BleedingDuration, 1.f);
+		UE_LOG(LogTemp, Display, TEXT("[Debuff] Bleeding applied (dmg=%.1f, dur=%.1f)"), Damage, BleedingDuration);
+	}
+	if (FMath::FRand() < FractureChance)
+	{
+		DebuffComponent->ApplyDebuff(EVOIDDebuffType::Fracture, FractureDuration, 1.f);
+		UE_LOG(LogTemp, Display, TEXT("[Debuff] Fracture applied (dmg=%.1f, dur=%.1f)"), Damage, FractureDuration);
+	}
 }
 
 void AVOIDPlayerCharacter::Tick(float DeltaTime)
@@ -99,6 +145,28 @@ void AVOIDPlayerCharacter::Tick(float DeltaTime)
 		WeaponComp->TickRecoil(DeltaTime, PitchDelta, YawDelta);
 		if (!FMath::IsNearlyZero(PitchDelta)) { AddControllerPitchInput(PitchDelta); }
 		if (!FMath::IsNearlyZero(YawDelta))   { AddControllerYawInput(YawDelta); }
+	}
+
+	// Bleeding 도트 데미지 — 1초마다 -1
+	if (DebuffComponent && DebuffComponent->HasDebuff(EVOIDDebuffType::Bleeding))
+	{
+		static float BleedAccum = 0.f;
+		BleedAccum += DeltaTime;
+		if (BleedAccum >= 1.f)
+		{
+			BleedAccum = 0.f;
+			ApplyDamage(1.f);
+		}
+	}
+
+	// 디버프 기반 이속 적용 (Fracture / Overweight)
+	if (DebuffComponent)
+	{
+		if (auto* Move = GetCharacterMovement())
+		{
+			const float SpeedMult = DebuffComponent->GetMoveSpeedMultiplier();
+			Move->MaxWalkSpeed = BaseWalkSpeed * SpeedMult;
+		}
 	}
 }
 
@@ -169,12 +237,6 @@ void AVOIDPlayerCharacter::Interact(const FInputActionValue& Value)
 	Params.AddIgnoredActor(this);
 	Params.bTraceComplex = false;
 
-	// 헬기 본체 메시(차량 자체)는 Block 응답이라 Sweep이 거기서 끊긴다 → 무시 처리
-	for (TActorIterator<AVOIDVehicle> It(GetWorld()); It; ++It)
-	{
-		Params.AddIgnoredActor(*It);
-	}
-
 	TArray<FHitResult> Hits;
 	GetWorld()->SweepMultiByChannel(
 		Hits, Start, End, FQuat::Identity, ECC_Visibility,
@@ -205,11 +267,30 @@ void AVOIDPlayerCharacter::Interact(const FInputActionValue& Value)
 		if (bStaticDecor) { continue; } // 헬기 데코 메시 등은 인터랙트 후보 아님
 		if (!bSlot && !bVehicle && !bItem) { continue; }
 
+		// 이미 설치된 슬롯은 후보 제외 — 다른 슬롯/차량 시동 분기로 양보
+		if (bSlot && IVOIDVehiclePartSlot::Execute_IsInstalled(HitActor)) { continue; }
+
 		const float DistSq = FVector::DistSquared(Start, HitActor->GetActorLocation());
 		if (DistSq < BestDistSq)
 		{
 			BestDistSq = DistSq;
 			Best = HitActor;
+		}
+	}
+
+	// Sweep 차단 (Visibility=Block 슬롯 등)으로 차량을 못 잡은 경우 fallback —
+	// 5m 이내 가장 가까운 AVOIDVehicle 을 시동 후보로 등록
+	if (!Best)
+	{
+		float NearestDistSq = FLT_MAX;
+		for (TActorIterator<AVOIDVehicle> It(GetWorld()); It; ++It)
+		{
+			const float DistSq = FVector::DistSquared(Start, It->GetActorLocation());
+			if (DistSq < FMath::Square(500.f) && DistSq < NearestDistSq)
+			{
+				NearestDistSq = DistSq;
+				Best = *It;
+			}
 		}
 	}
 

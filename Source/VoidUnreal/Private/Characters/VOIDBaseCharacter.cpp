@@ -10,10 +10,29 @@ AVOIDBaseCharacter::AVOIDBaseCharacter()
 void AVOIDBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// BP 측에서 HealthComponent 가 누락된 경우 런타임 fallback
+	if (!HealthComponent)
+	{
+		HealthComponent = FindComponentByClass<UVOIDHealthComponent>();
+		if (!HealthComponent)
+		{
+			HealthComponent = NewObject<UVOIDHealthComponent>(this, TEXT("HealthComponent_Runtime"));
+			if (HealthComponent)
+			{
+				HealthComponent->RegisterComponent();
+				UE_LOG(LogTemp, Warning, TEXT("[Base] %s HealthComponent runtime-created (BP missing)"), *GetName());
+			}
+		}
+	}
 }
 
 void AVOIDBaseCharacter::ApplyDamage(float DamageAmount)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[Base] %s::ApplyDamage(%.1f)  HealthComp=%s"),
+		*GetName(), DamageAmount,
+		HealthComponent ? *HealthComponent->GetName() : TEXT("NULL"));
+
 	if (HealthComponent)
 	{
 		HealthComponent->ApplyDamage(DamageAmount);

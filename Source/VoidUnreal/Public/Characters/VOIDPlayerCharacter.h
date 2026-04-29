@@ -48,6 +48,26 @@ protected:
 	void Interact(const FInputActionValue& Value);
 	void Fire(const FInputActionValue& Value);
 
+	UFUNCTION()
+	void OnInventoryWeightChanged(float TotalWeight, float MaxCarry);
+
+	UFUNCTION()
+	void OnPlayerHealthChanged(float NewHealth);
+
+	float LastHealthForBleeding = -1.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Debuff")
+	float BleedingChance = 0.3f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Debuff")
+	float BleedingDuration = 5.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Debuff")
+	float FractureChance = 0.3f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Debuff")
+	float FractureDuration = 10.f;
+
 	// BP 호환용 Wrapper — 본문은 WeaponComp로 위임
 	UFUNCTION(BlueprintCallable, Category="Void|Weapon")
 	void EquipWeapon(UVOIDWeaponConfig* NewWeapon);
