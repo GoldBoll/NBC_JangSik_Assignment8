@@ -58,9 +58,22 @@ bool AVOIDVehiclePartSlotActor::TryInstallPart_Implementation(UVOIDItemDataAsset
 		*UEnum::GetValueAsString(RequiredType),
 		Inv->GetTotalWeight(), Inv->GetMaxCarry());
 
+	// OwnerVehicle 이 비어있으면 ParentActor (ChildActorComponent 부모) 에서 자동 검색
+	if (!OwnerVehicle.IsValid())
+	{
+		for (AActor* Cur = GetParentActor(); Cur; Cur = Cur->GetParentActor())
+		{
+			if (auto* V = Cast<AVOIDVehicle>(Cur)) { OwnerVehicle = V; break; }
+		}
+	}
+
 	if (OwnerVehicle.IsValid())
 	{
 		OwnerVehicle->NotifySlotInstalled(RequiredType);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Slot] %s OwnerVehicle 미설정 — NotifySlotInstalled 호출 안 됨"), *GetName());
 	}
 	return true;
 }

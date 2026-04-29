@@ -21,6 +21,10 @@ class VOIDUNREAL_API AVOIDVehicle : public AActor
 public:
 	AVOIDVehicle();
 
+protected:
+	virtual void BeginPlay() override;
+
+public:
 	UFUNCTION(BlueprintCallable, Category="Vehicle")
 	void NotifySlotInstalled(EVOIDVehiclePartType PartType);
 
