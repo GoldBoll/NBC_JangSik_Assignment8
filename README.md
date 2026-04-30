@@ -194,8 +194,6 @@ C++ 멤버 / 생성자 / `UPROPERTY` 추가 시에는 Live Coding 으로는 반�
 | **AIPerception 청각 + 비동기 가시선** | 발사음·픽업음 → 노이즈 방향 감지(AIPerception 청각). `AsyncLineTraceByChannel` + `FTraceDelegate` 콜백 0.2초 주기 — 게임 스레드 블로킹 없이 BB `TargetActor` / `bHasTarget` 갱신 | `AI/VOIDZombieAIController.cpp` |
 | **샷건 펠릿 산탄 + 무기 커스터마이징** | `UVOIDWeaponConfig` (UDataAsset) — 펠릿 수/스프레드/레인지/반동/소음/FX/아이콘/표시명 전 파라미터 외부화, BP 노드 0개로 무기 추가 가능 | `Weapon/VOIDWeaponConfig.h`, `DA_Weapon_Rifle/Shotgun` |
 | **HUD WeaponIcon / RepairText** | 1/2 키 무기 스왑 시 `OnWeaponEquipped(UVOIDWeaponConfig*)` → 아이콘/이름 토글. 슬롯 설치 시 `0/3 → 3/3 ✓ Press E to Start` 갱신 (`OnSlotInstalled`/`OnRepairComplete`) | `UI/VOIDHUDWidget.cpp::HandleWeaponEquipped/HandleSlotInstalled/HandleRepairComplete` |
-| **헬기 데코 충돌 처리** | Sweep 후보에서 `AStaticMeshActor` 컷 → 옥상 헬기 등 데코가 인터랙션 후보로 잡히지 않음 | `Characters/VOIDPlayerCharacter.cpp::Interact` (cpp:204 `bStaticDecor`) |
-
 
 > 상세 채점용 `file:line` 매핑은 [`마스터.md`](./마스터.md) 참조.
 
