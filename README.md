@@ -2,6 +2,8 @@
 
 <video src="https://github.com/user-attachments/assets/730361ee-2849-42ea-b6f8-6c4af645d97a" controls width="100%"></video>
 
+> 📋 [마스터 과제 채점 가이드 (마스터.md)](./마스터.md)
+
 3인칭 TPS 좀비 서바이벌 익스트랙션 게임 `Void` 의 **Tier 0 프로토타입**.
 스파르타 언리얼 부트캠프 8번 과제 제출물이면서, Void 본편의 첫 구현 스냅샷.
 
