@@ -14,6 +14,7 @@
 #include "Vehicle/VOIDVehicle.h"
 #include "Weapon/VOIDWeaponConfig.h"
 
+// 버튼 바인딩 + 레벨 이름으로 HUD 모드 결정 + GameState 위임자 등록 및 현재 값 초기 갱신
 void UVOIDHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -44,6 +45,7 @@ void UVOIDHUDWidget::NativeConstruct()
 	}
 }
 
+// HP/인벤/소음/디버프/무기 컴포넌트 위임자 일괄 바인딩
 void UVOIDHUDWidget::BindToPlayer(APawn* PlayerPawn)
 {
 	if (!PlayerPawn) { return; }
@@ -74,6 +76,7 @@ void UVOIDHUDWidget::BindToPlayer(APawn* PlayerPawn)
 	}
 }
 
+// 차량 수리 슬롯 위임자 바인딩 + RepairText 초기화
 void UVOIDHUDWidget::BindToVehicle(AVOIDVehicle* Vehicle)
 {
 	if (!Vehicle) { return; }
@@ -100,6 +103,7 @@ void UVOIDHUDWidget::HandleWeightChanged(float TotalWeight, float MaxCarry)
 	RefreshInventoryText();
 }
 
+// 인벤토리 슬롯 전체를 문자열로 재구성해 Inventory 텍스트 갱신
 void UVOIDHUDWidget::RefreshInventoryText()
 {
 	if (!Inventory) { return; }
@@ -125,6 +129,7 @@ void UVOIDHUDWidget::HandleNoiseChanged(float NoiseLevel)
 	if (NoiseBar) { NoiseBar->SetPercent(NoiseLevel / 100.0f); }
 }
 
+// 활성 디버프를 한글 태그 문자열로 변환해 DebuffText 갱신
 void UVOIDHUDWidget::HandleDebuffUpdated(const TArray<EVOIDDebuffType>& ActiveDebuffs)
 {
 	if (!DebuffText) { return; }
@@ -156,6 +161,7 @@ void UVOIDHUDWidget::HandleWaveChanged(int32 NewWave)
 	if (WaveText) { WaveText->SetText(FText::Format(NSLOCTEXT("VOID", "Wave", "Wave {0}"), NewWave)); }
 }
 
+// 잔여 초를 MM:SS 형식으로 TimeText 갱신
 void UVOIDHUDWidget::HandleTimeChanged(float RemainingTime)
 {
 	if (TimeText)
@@ -166,6 +172,7 @@ void UVOIDHUDWidget::HandleTimeChanged(float RemainingTime)
 	}
 }
 
+// 무기 교체 시 WeaponIcon · WeaponNameText 갱신
 void UVOIDHUDWidget::HandleWeaponEquipped(UVOIDWeaponConfig* NewWeapon)
 {
 	if (WeaponIcon)
@@ -213,6 +220,7 @@ void UVOIDHUDWidget::HandleRepairComplete()
 	}
 }
 
+// 모드(MainMenu/InGame/GameOver/GameClear)에 따라 패널·버튼 가시성 + 입력 모드 전환
 void UVOIDHUDWidget::SetHUDMode(EVOIDHUDMode NewMode)
 {
 	auto Toggle = [](UWidget* W, bool bShow)

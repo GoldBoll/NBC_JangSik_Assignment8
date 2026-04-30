@@ -5,6 +5,7 @@
 #include "Components/VOIDInventoryComponent.h"
 #include "Components/VOIDNoiseComponent.h"
 
+// TriggerSphere(반경 80, OverlapAllDynamic) + MeshComp(NoCollision) 생성
 AVOIDPickupBase::AVOIDPickupBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -19,6 +20,7 @@ AVOIDPickupBase::AVOIDPickupBase()
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
+// bAutoPickup 활성 시 TriggerSphere BeginOverlap 자동 바인딩
 void AVOIDPickupBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -34,6 +36,7 @@ void AVOIDPickupBase::BeginPlay()
 	}
 }
 
+// InventoryComponent 에 아이템 추가 성공 시 소음 발생 후 Destroy
 void AVOIDPickupBase::HandleBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {

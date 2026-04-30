@@ -8,6 +8,7 @@ UVOIDNoiseComponent::UVOIDNoiseComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
+// 매 프레임 CurrentNoise 자연 감쇠, 0에 도달하면 Tick 내에서 갱신 중단
 void UVOIDNoiseComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -19,6 +20,7 @@ void UVOIDNoiseComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	}
 }
 
+// Source별 기본 소음·반경 산출 → 무게 스케일 후 CurrentNoise 누적 및 AI Hearing 이벤트 발송
 void UVOIDNoiseComponent::EmitNoise(EVOIDNoiseSource Source, float WeightMultiplier)
 {
 	float BaseNoise = 0.0f;
@@ -47,6 +49,7 @@ void UVOIDNoiseComponent::EmitNoise(EVOIDNoiseSource Source, float WeightMultipl
 	BroadcastNoise(Radius * WeightMultiplier * Attenuation);
 }
 
+// UAISense_Hearing 에 노이즈 이벤트 등록, 디버그 빌드에서 구체 시각화
 void UVOIDNoiseComponent::BroadcastNoise(float Radius)
 {
 	if (!GetOwner() || !GetWorld()) return;

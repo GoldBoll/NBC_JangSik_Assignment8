@@ -9,6 +9,7 @@ AVOIDPlayerController::AVOIDPlayerController()
 {
 }
 
+// HUD 위젯 생성·뷰포트 추가, Pawn 존재 시 바로 BindToPlayer
 void AVOIDPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -35,6 +36,7 @@ void AVOIDPlayerController::BeginPlay()
 	}
 }
 
+// Pawn 교체 시 HUD 재바인딩 + HP OnDeath 델리게이트 등록
 void AVOIDPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);

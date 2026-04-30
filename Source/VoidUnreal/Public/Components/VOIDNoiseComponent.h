@@ -4,8 +4,10 @@
 #include "Components/ActorComponent.h"
 #include "VOIDNoiseComponent.generated.h"
 
+// 소음 변경 시 HUD 게이지가 구독하는 멀티캐스트 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVOIDOnNoiseChanged, float, CurrentNoise);
 
+// 소음 발생원 종류 — 각 소스별 BaseNoise/Radius 매핑
 UENUM(BlueprintType)
 enum class EVOIDNoiseSource : uint8
 {
@@ -26,12 +28,14 @@ class VOIDUNREAL_API UVOIDNoiseComponent : public UActorComponent
 public:
 	UVOIDNoiseComponent();
 
+	// 매 프레임 NoiseDecayPerSecond만큼 감쇠
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	// 행동별 소음 발생 — WeightMultiplier는 무게 기반 배수
 	UFUNCTION(BlueprintCallable, Category="Noise")
 	void EmitNoise(EVOIDNoiseSource Source, float WeightMultiplier = 1.0f);
 
+	// 현재 소음 수치 조회 (HUD NoiseBar 바인딩용)
 	UFUNCTION(BlueprintPure, Category="Noise")
 	float GetCurrentNoise() const { return CurrentNoise; }
 
@@ -42,6 +46,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Noise")
 	int32 GetFloorIndex() const { return OwnerFloorIndex; }
 
+	// 소음 변경 이벤트 — HUD 구독
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FVOIDOnNoiseChanged OnNoiseChanged;
 
@@ -58,6 +63,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Noise", meta=(ClampMin="0.0", ClampMax="1.0"))
 	float PerFloorAttenuation = 0.4f;
 
+	// 누적 소음값 (감쇠 적용됨)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Noise")
 	float CurrentNoise = 0.0f;
 

@@ -45,6 +45,7 @@ bool UVOIDInventoryComponent::TryAddItem(UVOIDItemDataAsset* ItemData, int32 Qua
 	return true;
 }
 
+// 슬롯에서 Quantity 차감, 0 이하면 슬롯 제거 후 무게 재산출
 bool UVOIDInventoryComponent::RemoveItem(UVOIDItemDataAsset* ItemData, int32 Quantity)
 {
 	if (!ItemData || Quantity <= 0) { return false; }
@@ -65,6 +66,7 @@ bool UVOIDInventoryComponent::RemoveItem(UVOIDItemDataAsset* ItemData, int32 Qua
 	return false;
 }
 
+// VehiclePart 카테고리 중 PartType 일치 슬롯의 ItemData 반환, 없으면 nullptr
 UVOIDItemDataAsset* UVOIDInventoryComponent::FindPartByType(EVOIDVehiclePartType PartType) const
 {
 	for (const FVOIDInventorySlot& Slot : Slots)
@@ -80,16 +82,19 @@ UVOIDItemDataAsset* UVOIDInventoryComponent::FindPartByType(EVOIDVehiclePartType
 	return nullptr;
 }
 
+// 추가 무게 포함 시 MaxCarry 초과 여부
 bool UVOIDInventoryComponent::CanCarry(float AdditionalWeight) const
 {
 	return (TotalWeight + AdditionalWeight) <= MaxCarry;
 }
 
+// TotalWeight / MaxCarry 비율 (0~1)
 float UVOIDInventoryComponent::GetWeightRatio() const
 {
 	return MaxCarry > 0.0f ? (TotalWeight / MaxCarry) : 0.0f;
 }
 
+// 슬롯 전체 무게 합산 후 OnWeightChanged Broadcast
 void UVOIDInventoryComponent::RecomputeTotalWeight()
 {
 	float Sum = 0.0f;

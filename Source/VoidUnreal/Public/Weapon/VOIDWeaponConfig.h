@@ -8,6 +8,7 @@ class USoundBase;
 class UCameraShakeBase;
 class UTexture2D;
 
+// 무기 분류 — DA 인스턴스가 어떤 종류인지 표시
 UENUM(BlueprintType)
 enum class EVOIDWeaponClass : uint8
 {

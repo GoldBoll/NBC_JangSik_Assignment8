@@ -10,12 +10,14 @@
 #include "Core/VOIDPlayerController.h"
 #include "UI/VOIDHUDWidget.h"
 
+// 생성자 — Tick 비활성화 + GameState 클래스 지정
 AVOIDGameMode::AVOIDGameMode()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	GameStateClass = AVOIDGameState::StaticClass();
 }
 
+// 시동 성공 → 모든 타이머 정리 후 Lv_Escape 로 전환
 void AVOIDGameMode::HandleEscapeSuccess(AActor* Driver)
 {
 	UE_LOG(LogTemp, Display, TEXT("[VOID] HandleEscapeSuccess by %s → OpenLevel(%s)"),
@@ -27,6 +29,7 @@ void AVOIDGameMode::HandleEscapeSuccess(AActor* Driver)
 	UGameplayStatics::OpenLevel(this, EscapeLevelName);
 }
 
+// 게임오버 처리 — 타이머 정리 + HUD GameOver 모드 + 입력 차단
 void AVOIDGameMode::HandleGameOver()
 {
 	UE_LOG(LogTemp, Display, TEXT("[VOID] HandleGameOver — show GameOver overlay (no level change)"));
@@ -49,6 +52,7 @@ void AVOIDGameMode::HandleGameOver()
 	}
 }
 
+// 게임 시작 — 1웨이브 시작 + 탈출 타이머 가동
 void AVOIDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
@@ -56,6 +60,7 @@ void AVOIDGameMode::BeginPlay()
 	StartEscapeTimer();
 }
 
+// 10분 탈출 타이머 + 1초 Tick 가동
 void AVOIDGameMode::StartEscapeTimer()
 {
 	EscapeRemaining = EscapeTimeLimit;
@@ -78,6 +83,7 @@ void AVOIDGameMode::StartEscapeTimer()
 		1.0f, true);
 }
 
+// 1초마다 잔여시간 -1, GameState Broadcast → HUD TimeText 갱신
 void AVOIDGameMode::OnEscapeTick()
 {
 	EscapeRemaining = FMath::Max(0.0f, EscapeRemaining - 1.0f);

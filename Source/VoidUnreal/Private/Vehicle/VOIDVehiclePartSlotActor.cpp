@@ -6,6 +6,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 
+// InteractionVolume(반경 180, Visibility=Block) + EmptyMesh/InstalledMesh 생성
 AVOIDVehiclePartSlotActor::AVOIDVehiclePartSlotActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -29,6 +30,7 @@ AVOIDVehiclePartSlotActor::AVOIDVehiclePartSlotActor()
 	InstalledMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
+// 타입 검증 → 인벤 차감 → 메시 교체 → OwnerVehicle 슬롯 통보
 bool AVOIDVehiclePartSlotActor::TryInstallPart_Implementation(UVOIDItemDataAsset* Part, AActor* Installer)
 {
 	if (bInstalled || !IsValid(Part) || !IsValid(Installer)) return false;

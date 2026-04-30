@@ -8,6 +8,7 @@
 class AVOIDZombieCharacter;
 class AVOIDPickupBase;
 
+// 웨이브 진행 중 발동되는 특수 이벤트
 UENUM(BlueprintType)
 enum class EVOIDWaveEvent : uint8
 {
@@ -16,6 +17,7 @@ enum class EVOIDWaveEvent : uint8
 	CarRepair   UMETA(DisplayName="차량 수리 (Wave 3)") // 부품 수집·탈출
 };
 
+// 층별 클리어 목표 (UI 배너 표시용)
 UENUM(BlueprintType)
 enum class EVOIDFloorGoal : uint8
 {
@@ -29,21 +31,27 @@ struct FVOIDWaveData : public FTableRowBase
 {
 	GENERATED_BODY()
 
+	// 웨이브 번호 (1=1F, 2=2F, 3=3F)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 WaveIndex = 1;
 
+	// 웨이브 표시 이름
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText WaveName;
 
+	// 웨이브 제한 시간 (초)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin="0.0"))
 	float TimeLimit = 120.0f;
 
+	// 스폰할 좀비 수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin="0"))
 	int32 ZombieCount = 20;
 
+	// 스폰할 아이템 수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin="0"))
 	int32 ItemSpawnCount = 15;
 
+	// 웨이브 특수 이벤트 (사이렌/차량수리)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EVOIDWaveEvent EventType = EVOIDWaveEvent::None;
 

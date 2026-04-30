@@ -4,6 +4,7 @@
 #include "Characters/VOIDPlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
 
+// Trigger 볼륨 생성 (150x150x200) + BeginOverlap 바인딩
 AVOIDFloorTransitionTrigger::AVOIDFloorTransitionTrigger()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -15,6 +16,7 @@ AVOIDFloorTransitionTrigger::AVOIDFloorTransitionTrigger()
 	RootComponent = Trigger;
 }
 
+// 플레이어 진입 + 현재 웨이브 번호 == TargetFloorIndex - 1 일 때 AdvanceWave
 void AVOIDFloorTransitionTrigger::HandleBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {

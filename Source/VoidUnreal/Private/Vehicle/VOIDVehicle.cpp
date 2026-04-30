@@ -10,6 +10,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "TimerManager.h"
 
+// Body 루트 + StartEngineVolume (120x120x80 OverlapAllDynamic) 생성
 AVOIDVehicle::AVOIDVehicle()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -41,6 +42,7 @@ void AVOIDVehicle::BeginPlay()
 	});
 }
 
+// 설치 카운트 증가, 3개 완료 시 OnRepairComplete Broadcast
 void AVOIDVehicle::NotifySlotInstalled(EVOIDVehiclePartType PartType)
 {
 	++InstalledCount;
@@ -53,6 +55,7 @@ void AVOIDVehicle::NotifySlotInstalled(EVOIDVehiclePartType PartType)
 	}
 }
 
+// 수리 미완료면 false, 완료 시 GameMode 탈출 성공 처리
 bool AVOIDVehicle::TryStartEngine(AActor* Driver)
 {
 	if (!bRepairComplete) return false;

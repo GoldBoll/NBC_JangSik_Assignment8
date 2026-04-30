@@ -6,6 +6,7 @@
 
 class UBoxComponent;
 
+// 스폰 볼륨이 처리할 액터 종류
 UENUM(BlueprintType)
 enum class EVOIDSpawnKind : uint8
 {
@@ -22,12 +23,15 @@ class VOIDUNREAL_API AVOIDSpawnVolume : public AActor
 public:
 	AVOIDSpawnVolume();
 
+	// 볼륨 박스 내부 임의 좌표 반환 + 라인트레이스 바닥 안착
 	UFUNCTION(BlueprintCallable, Category="Spawn")
 	FVector GetRandomPointInVolume() const;
 
+	// 지정 클래스 액터 1개 생성 (좀비/픽업)
 	UFUNCTION(BlueprintCallable, Category="Spawn")
 	AActor* SpawnActorOfClass(TSubclassOf<AActor> ActorClass);
 
+	// 이 볼륨이 처리할 종류 (좀비/아이템/둘 다)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawn")
 	EVOIDSpawnKind SpawnKind = EVOIDSpawnKind::Zombie;
 
@@ -36,6 +40,7 @@ public:
 	int32 FloorIndex = 1;
 
 protected:
+	// 스폰 영역 박스 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Spawn")
 	TObjectPtr<UBoxComponent> Bounds;
 };

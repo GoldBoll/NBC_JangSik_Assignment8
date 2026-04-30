@@ -4,6 +4,7 @@
 #include "Items/VOIDPickupBase.h"
 #include "VOIDVehiclePart.generated.h"
 
+// 차량 부품 종류 — 슬롯 매칭 키
 UENUM(BlueprintType)
 enum class EVOIDVehiclePartType : uint8
 {
@@ -20,6 +21,7 @@ class VOIDUNREAL_API AVOIDVehiclePart : public AVOIDPickupBase
 	GENERATED_BODY()
 
 public:
+	// 이 부품의 종류 (슬롯의 RequiredType과 일치해야 설치 가능)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VehiclePart")
 	EVOIDVehiclePartType PartType = EVOIDVehiclePartType::None;
 };

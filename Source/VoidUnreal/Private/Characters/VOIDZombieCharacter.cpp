@@ -3,11 +3,13 @@
 #include "Core/VOIDGameState.h"
 #include "Kismet/GameplayStatics.h"
 
+// Tick 활성화 — AttackPlayer 쿨다운 폴링용
 AVOIDZombieCharacter::AVOIDZombieCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
+// HP OnDeath → HandleZombieDeath 바인딩
 void AVOIDZombieCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -18,6 +20,7 @@ void AVOIDZombieCharacter::BeginPlay()
 	}
 }
 
+// 사망 시 GameState에 ScoreReward 적립
 void AVOIDZombieCharacter::HandleZombieDeath()
 {
 	if (auto* GS = UGameplayStatics::GetGameState(this))
